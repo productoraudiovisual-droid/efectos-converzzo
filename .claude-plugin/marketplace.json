@@ -1,0 +1,27 @@
+{
+  "name": "efectos-converzzo",
+  "owner": {
+    "name": "Converzzo",
+    "url": "https://instagram.com/converzzo"
+  },
+  "metadata": {
+    "description": "Plugin gratuito de Converzzo: efectos de video, motion graphics y edición con Claude."
+  },
+  "plugins": [
+    {
+      "name": "efectos-converzzo",
+      "source": "./plugins/efectos-converzzo",
+      "description": "42 efectos de video para Reels y TikTok que Claude aplica por ti: zooms, dolly zoom, looks de color, fondo borroso, transiciones, cámara lenta, motion graphics, efectos de sonido y gráficos para negocios (precio, WhatsApp, ubicación, antes y después). Gratis, por @converzzo.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Converzzo"
+      },
+      "license": "MIT",
+      "keywords": [
+        "video",
+        "reels",
+        "efectos"
+      ]
+    }
+  ]
+}

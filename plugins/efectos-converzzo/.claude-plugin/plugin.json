@@ -1,0 +1,22 @@
+{
+  "name": "efectos-converzzo",
+  "version": "1.0.0",
+  "description": "42 efectos de video para Reels y TikTok que Claude aplica por ti: zooms, dolly zoom, looks de color, fondo borroso, transiciones, cámara lenta, motion graphics, efectos de sonido y gráficos para negocios (precio, WhatsApp, ubicación, antes y después). Gratis, por @converzzo.",
+  "author": {
+    "name": "Converzzo",
+    "url": "https://instagram.com/converzzo"
+  },
+  "homepage": "https://github.com/converzzodesign/efectos-converzzo",
+  "repository": "https://github.com/converzzodesign/efectos-converzzo",
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "reels",
+    "tiktok",
+    "efectos",
+    "edicion",
+    "remotion",
+    "zoom",
+    "dolly-zoom"
+  ]
+}
