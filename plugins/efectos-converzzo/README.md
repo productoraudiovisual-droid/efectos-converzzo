@@ -5,12 +5,12 @@ Efectos de video, motion graphics y edición para tus videos verticales (Reels, 
 ## Cómo instalarlo
 **En la app de Claude (Cowork o chat):**
 1. Ve a Personalizar → **Plugins** → Agregar → **Agregar marketplace**.
-2. Escribe `converzzodesign/efectos-converzzo`.
+2. Escribe `productoraudiovisual-droid/efectos-converzzo`.
 3. En la pestaña **Descubrir**, abre *efectos-converzzo* y dale **Agregar**.
 
 **En Claude Code:**
 ```
-/plugin marketplace add converzzodesign/efectos-converzzo
+/plugin marketplace add productoraudiovisual-droid/efectos-converzzo
 /plugin install efectos-converzzo@efectos-converzzo
 ```
 
