@@ -14,7 +14,7 @@ from mediapipe.tasks.python.core.base_options import BaseOptions
 video, desde, hasta, fps, salida = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), float(sys.argv[4]), sys.argv[5]
 COLLAGE = len(sys.argv) > 6 and sys.argv[6] == "collage"
 os.makedirs(salida, exist_ok=True)
-W, H = 1080, 1920
+W, H = (int(x) for x in os.environ.get("SALIDA", "1080x1920").split("x"))   # tamaño del video final
 MODELO = os.path.join(os.path.dirname(__file__), "..", "models", "selfie_segmenter.tflite")
 seg = vision.ImageSegmenter.create_from_options(vision.ImageSegmenterOptions(
     base_options=BaseOptions(model_asset_path=MODELO), running_mode=vision.RunningMode.VIDEO,

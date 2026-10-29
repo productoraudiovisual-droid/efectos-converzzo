@@ -38,6 +38,14 @@ const datos = (archivo) => {
 let info = datos(path.resolve(video));
 
 let plan = JSON.parse(fs.readFileSync(planFile, "utf8"));
+// formato de salida: "original" (respeta la proporción del video; por defecto), "vertical" (1080x1920) u "horizontal" (1920x1080)
+const formato = String(plan.formato ?? ((plan.capas ?? []).some((c) => c.efecto === "reencuadre") ? "vertical" : "original"));
+const par = (n) => Math.round(n / 2) * 2;
+const salidaDe = (a, b) => formato === "vertical" ? { w: 1080, h: 1920 } : formato === "horizontal" ? { w: 1920, h: 1080 }
+  : a >= b ? { w: 1920, h: par((1920 * b) / a) } : { w: 1080, h: par((1080 * b) / a) };
+const salidaTam = salidaDe(info.ancho, info.alto);
+process.env.SALIDA = `${salidaTam.w}x${salidaTam.h}`;
+console.log(`Formato de salida: ${salidaTam.w}x${salidaTam.h}`);
 for (const c of plan.capas ?? []) {
   if (!CONOCIDOS.includes(c.efecto)) { console.error(`Efecto desconocido: ${c.efecto}. Disponibles: ${CONOCIDOS.join(", ")}`); process.exit(1); }
   if (!(c.hasta > c.desde)) { console.error(`La capa ${c.efecto} necesita "desde" menor que "hasta".`); process.exit(1); }
@@ -194,7 +202,7 @@ try {
     c._recorte = `${id}/recorte_${i}`;
   });
   const fps = info.fps, duracion = Math.ceil(info.seg * fps);
-  Object.assign(plan, { video: `${id}/video.mp4`, fps, duracion, ancho: info.ancho, alto: info.alto });
+  Object.assign(plan, { video: `${id}/video.mp4`, fps, duracion, ancho: info.ancho, alto: info.alto, salida: salidaTam });
   const tmpProps = path.join(os.tmpdir(), id + "_plan.json");
   fs.writeFileSync(tmpProps, JSON.stringify(plan));
 

@@ -12,7 +12,8 @@ fps = cap.get(cv2.CAP_PROP_FPS) or 30
 W, H = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 # Encuadre final 1080x1920 (object-fit: cover): coordenadas relativas al recorte vertical.
-destino = 1080 / 1920
+_sw, _sh = (int(x) for x in os.environ.get("SALIDA", "1080x1920").split("x"))
+destino = _sw / _sh   # proporción del video final
 if W / H > destino:
     cw, ch = H * destino, H
 else:

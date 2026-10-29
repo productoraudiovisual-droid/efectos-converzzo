@@ -10,7 +10,7 @@ Todos los comandos del pack siguen este flujo. La persona normalmente no es téc
 ## 1. El video
 - Usa el video que la persona adjuntó o nombró. Si tiene una carpeta "Material crudo", búscalo ahí. Si no hay video, pídelo.
 - Nunca modifiques el original: todo sale como un archivo nuevo.
-- Sirve vertical u horizontal. La salida siempre es 1080×1920.
+- Sirve vertical u horizontal. La salida respeta el formato del original (ver "Formato de salida").
 
 ## 2. Encuentra los momentos
 - Si la persona dice el momento ("en la palabra dinero", "en el segundo 5"), úsalo.
@@ -37,9 +37,15 @@ Usa el punto medio de cada efecto. Mira las fotos tú mismo: la cara no puede qu
 
 ## 5. Render final
 `cd MOTOR && node render.mjs <video> <plan.json> <salida>.mp4`
-- Sale en 1080×1920 con el audio original a -14 LUFS y sonidos sutiles en cada efecto. Para quitarlos: `"sonido": false`.
+- Sale en el formato del original (ver abajo) con el audio original a -14 LUFS y sonidos sutiles en cada efecto. Para quitarlos: `"sonido": false`.
 - Guárdalo como `<nombre>_efectos.mp4` en la carpeta "Resultados" si existe, o junto al original. Entrega el archivo y recuerda en una línea que lo revise antes de publicar.
 - Para hacer cambios después ("más zoom", "cambia el precio"), edita el plan y vuelve a renderizar.
+
+## Formato de salida
+- Por defecto el video sale **con la misma proporción del original**: un video horizontal sale horizontal (1920×1080) y uno vertical sale vertical (1080×1920).
+- Para forzarlo, pon en el plan `"formato": "vertical"` (1080×1920, para Reels/TikTok) o `"formato": "horizontal"` (1920×1080, para YouTube).
+- Si el video es horizontal y la persona habla de Reels, TikTok o Shorts, pregúntale en una línea si lo quiere vertical. `/reencuadre` siempre sale vertical.
+- En horizontal, las tarjetas (prompt, chat, notificaciones, gráficas, widgets) se ubican al lado libre de la cara.
 
 ## Efectos disponibles
 **Edición base** (normalmente en todo el video): `cortar-silencios`, `limpiar-voz`, `musica`.

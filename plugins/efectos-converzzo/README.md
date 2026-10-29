@@ -21,7 +21,7 @@ Adjunta tu video y escribe el comando, por ejemplo:
 
 > /zoom-in en la palabra "gratis"
 
-Claude escucha el video, te muestra el plan para que lo apruebes y te entrega el video listo en 1080×1920.
+Claude escucha el video, te muestra el plan para que lo apruebes y te entrega el video listo, en el mismo formato de tu video (vertical 1080×1920 u horizontal 1920×1080).
 
 ## Efectos
 **Edición base**

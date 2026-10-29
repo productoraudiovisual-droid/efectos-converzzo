@@ -15,6 +15,8 @@ export type Plan = {
   duracion: number;       // frames (la pone render.mjs)
   fps: number;            // (la pone render.mjs)
   ancho?: number; alto?: number;   // tamaño original del video (lo pone render.mjs)
+  salida?: { w: number; h: number };   // tamaño del video final (lo pone render.mjs según "formato")
+  formato?: string;       // "original" (por defecto), "vertical" (1080x1920) u "horizontal" (1920x1080)
   caras?: Cara[];         // (lo pone render.mjs)
   estilo?: Estilo;
   sonido?: boolean;       // sonidos de los efectos (por defecto sí)

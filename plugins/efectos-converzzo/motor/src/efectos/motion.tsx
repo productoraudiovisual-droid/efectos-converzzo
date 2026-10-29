@@ -18,6 +18,15 @@ const ubicarY = (capa: Capa, ctx: Ctx, CH: number, H: number) => {
   const bajo = (c.y + c.h) * H, limite = H * 0.86 - CH;
   return bajo + 60 <= limite ? clamp(bajo + 60, H * 0.45, limite) : H * 0.08;
 };
+// Dónde va una tarjeta: en vertical, a lo ancho y debajo de la cara; en horizontal, al lado libre de la cara.
+const zona = (capa: Capa, ctx: Ctx, CH: number, W: number, H: number) => {
+  if (W <= H) return { left: 60, width: W - 120, top: ubicarY(capa, ctx, CH, H) };
+  const c = caraEntre(ctx.caras, capa.desde, capa.hasta);
+  const width = Math.min(860, W * 0.44);
+  const left = c.x + c.w / 2 < 0.5 ? W - width - 70 : 70;
+  const top = typeof capa.y === "number" ? capa.y * H : clamp((H - CH) / 2, 40, H - CH - 40);
+  return { left, width, top };
+};
 const fmt = (n: number, dec: number) => {
   const [e, f] = n.toFixed(dec).split(".");
   return (e.length > 3 ? e.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : e) + (f ? "," + f : "");
@@ -38,8 +47,8 @@ export const GraficaDatos: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) 
   const titulo = txt(capa.titulo), pre = txt(capa.prefijo), suf = txt(capa.sufijo);
   const dec = Math.round(num(capa.decimales, 0));
   const dest = typeof capa.destacar === "number" ? capa.destacar : datos.reduce((bi, d, i, a) => (d.valor > a[bi].valor ? i : bi), 0);
-  const CW = W - 120, AH = tipo === "dona" ? 380 : 420, CH = AH + (titulo ? 90 : 0) + 110;
-  const top = ubicarY(capa, ctx, CH, H);
+  const AH = tipo === "dona" ? 380 : 420, CH = AH + (titulo ? 90 : 0) + 110;
+  const { left: LX, width: CW, top } = zona(capa, ctx, CH, W, H);
   const max = Math.max(...datos.map((d) => d.valor), 1);
   const inicio = 0.35, dur = Math.min(1.6, v.L * 0.45);
   const crece = (i: number) => eOut(clamp((v.s - inicio - i * 0.12) / dur));
@@ -112,7 +121,7 @@ export const GraficaDatos: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) 
     );
   }
   return (
-    <div style={{ position: "absolute", left: 60, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.94, 1, v.entra)})` }}>
+    <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.94, 1, v.entra)})` }}>
       <div style={{ background: E.fondo, borderRadius: 34, padding: "30px 40px", boxShadow: sombra }}>
         {titulo ? <div style={{ fontFamily: familia(E.fuenteTitulo), fontSize: 46, color: E.texto, letterSpacing: "-0.02em", marginBottom: 14 }}>{titulo}</div> : null}
         {grafica}
@@ -268,7 +277,7 @@ export const MockupInterfaz: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }
     const ns = (Array.isArray(capa.notificaciones) ? capa.notificaciones : []) as Notif[];
     const visibles = ns.map((n, i) => ({ ...n, en: tiempoDe(i, ns.length, n.en) })).filter((n) => v.t >= n.en - 0.05);
     return (
-      <div style={{ position: "absolute", left: 40, right: 40, top: 120, opacity: 1 - v.sale }}>
+      <div style={{ position: "absolute", ...(W > H ? { width: Math.min(820, W * 0.42), right: 60 } : { left: 40, right: 40 }), top: W > H ? 60 : 120, opacity: 1 - v.sale }}>
         {visibles.slice().reverse().map((n, k) => {
           const a = eBack(clamp((v.t - n.en) / 0.4), 1.4);
           return (
@@ -297,10 +306,10 @@ export const MockupInterfaz: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }
     const enviado = 0.4 + Math.max(0.6, Math.min(2.2, texto.length * 0.045)) + 0.25;
     const pensando = v.s > enviado && v.s < enviado + 0.9;
     const r = clamp((v.s - enviado - 0.9) / Math.max(0.8, Math.min(2.5, resp.length * 0.03)));
-    const CW = W - 120, CH = 520;
-    const top = ubicarY(capa, ctx, CH, H);
+    const CH = resp ? 300 : 200;
+    const { left: LX, width: CW, top } = zona(capa, ctx, CH, W, H);
     return (
-      <div style={{ position: "absolute", left: 60, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px)` }}>
+      <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px)` }}>
         <div style={{ background: "#FAFAF7", borderRadius: 30, padding: 28, boxShadow: sombra, fontFamily: familia(E.fuente) }}>
           {v.s > enviado ? (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
@@ -329,11 +338,11 @@ export const MockupInterfaz: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }
   const ms = ((Array.isArray(capa.mensajes) ? capa.mensajes : []) as Msg[]).map((m, i, a) => ({ ...m, en: tiempoDe(i, a.length, m.en) }));
   const visibles = ms.filter((m) => v.t >= m.en);
   const sig = ms.find((m) => v.t < m.en && m.en - v.t < 0.8 && m.de !== "yo");
-  const CW = W - 120, CH = 560;
-  const top = ubicarY(capa, ctx, CH, H);
+  const CH = 560;
+  const { left: LX, width: CW, top } = zona(capa, ctx, CH, W, H);
   const nombre = txt(capa.nombre, "Cliente");
   return (
-    <div style={{ position: "absolute", left: 60, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px)` }}>
+    <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px)` }}>
       <div style={{ background: "#F2EFEA", borderRadius: 30, overflow: "hidden", boxShadow: sombra, fontFamily: familia(E.fuente) }}>
         <div style={{ background: "#fff", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16, borderBottom: "1px solid #E5E5E5" }}>
           <div style={{ width: 58, height: 58, borderRadius: 99, background: E.acento, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: familia(E.fuenteTitulo), fontSize: 28 }}>{nombre.slice(0, 1)}</div>
