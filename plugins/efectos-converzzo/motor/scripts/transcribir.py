@@ -8,7 +8,18 @@ from faster_whisper import WhisperModel
 
 video, salida = sys.argv[1], sys.argv[2]
 idioma = sys.argv[3] if len(sys.argv) > 3 else None
-modelo = WhisperModel("small", device="cpu", compute_type="int8")
+# con tarjeta NVIDIA usa un modelo más grande y preciso; si no, "small" en el procesador. EFECTOS_WHISPER cambia el modelo.
+import os
+try:
+    import ctranslate2
+    cuda = ctranslate2.get_cuda_device_count() > 0 and os.environ.get("EFECTOS_CPU") != "1"
+except Exception:
+    cuda = False
+nombre = os.environ.get("EFECTOS_WHISPER") or ("medium" if cuda else "small")
+try:
+    modelo = WhisperModel(nombre, device="cuda" if cuda else "cpu", compute_type="float16" if cuda else "int8")
+except Exception:
+    modelo = WhisperModel("small", device="cpu", compute_type="int8")
 # El audio se lee con ffmpeg (más compatible que el lector interno).
 crudo = subprocess.run(["ffmpeg", "-v", "error", "-i", video, "-ac", "1", "-ar", "16000", "-f", "s16le", "-"], capture_output=True, check=True).stdout
 audio = np.frombuffer(crudo, np.int16).astype(np.float32) / 32768.0

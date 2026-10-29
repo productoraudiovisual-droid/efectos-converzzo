@@ -16,14 +16,15 @@ export type Plan = {
   fps: number;            // (la pone render.mjs)
   ancho?: number; alto?: number;   // tamaño original del video (lo pone render.mjs)
   salida?: { w: number; h: number };   // tamaño del video final (lo pone render.mjs según "formato")
-  formato?: string;       // "original" (por defecto), "vertical" (1080x1920) u "horizontal" (1920x1080)
+  formato?: string;       // "original" (por defecto), "vertical", "horizontal", "cuadrado" o "retrato"
   caras?: Cara[];         // (lo pone render.mjs)
   estilo?: Estilo;
   sonido?: boolean;       // sonidos de los efectos (por defecto sí)
+  _alfa?: boolean;        // video con transparencia (quitar-fondo); lo pone render.mjs
   capas: Capa[];
 };
 // Lo que reciben los efectos gráficos.
-export type Ctx = { estilo?: Estilo; caras?: Cara[]; video?: string };
+export type Ctx = { estilo?: Estilo; caras?: Cara[]; video?: string; ancho?: number; alto?: number };
 export type SfxPlan = { archivo: string; en: number; vol?: number };
 
 export const ESTILO_BASE: Required<Estilo> = {

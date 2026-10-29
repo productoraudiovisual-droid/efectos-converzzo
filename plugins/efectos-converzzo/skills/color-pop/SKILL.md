@@ -23,6 +23,6 @@ Parte del pack gratuito de efectos de Converzzo (@converzzo).
 ```json
 {"efecto": "color-pop", "desde": 4.8, "hasta": 8.1}
 ```
-Opciones: `transicion` (0.35 s de entrada y salida).
+Opciones: `transicion` (0.35 s de entrada y salida). `sujeto`: `"objeto"` para recortar un objeto (un plato, un producto, una bebida) en vez de la persona: las manos y el resto quedan fuera. Marca el objeto con `"punto": [x, y]` o `"caja": [x0, y0, x1, y1]` (0 a 1) en el segundo `referencia` y el motor lo sigue con SAM 2.1 (ver "Objetos" en GUIA.md). Tarda más.
 
 Se puede combinar con cualquier otro efecto del pack en el mismo plan (ver GUIA.md).

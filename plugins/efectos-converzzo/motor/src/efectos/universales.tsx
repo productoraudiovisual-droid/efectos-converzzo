@@ -2,13 +2,14 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { Capa, Ctx, SfxPlan, caraEntre, clamp, eBack, eIn, eOut, estiloFinal, familia, lerp, num } from "../lib/base";
+import { colocar } from "../lib/zona";
 
 const txt = (v: unknown, d = "") => (typeof v === "string" ? v : typeof v === "number" ? String(v) : d);
 const useVida = (capa: Capa) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = f / fps, s = t - capa.desde, L = capa.hasta - capa.desde;
-  return { f, t, s, L, dentro: s >= -0.02 && s <= L + 0.02, entra: eBack(clamp(s / 0.42), 1.5), sale: eIn(clamp((s - (L - 0.3)) / 0.3)) };
+  return { f, fps, t, s, L, dentro: s >= -0.02 && s <= L + 0.02, entra: eBack(clamp(s / 0.42), 1.5), sale: eIn(clamp((s - (L - 0.3)) / 0.3)) };
 };
 const sombra = "0 22px 50px rgba(0,0,0,.32), 0 4px 10px rgba(0,0,0,.15)";
 
@@ -138,7 +139,7 @@ export const sonidosDato = (c: Capa): SfxPlan[] => {
 // =====================================================================
 // INGREDIENTES: etiquetas que señalan partes de un producto o plato
 // =====================================================================
-type Punto = { texto: string; x: number; y: number; en?: number };
+type Punto = { texto: string; x: number; y: number; en?: number; pista?: [number, number][]; lado?: string; arriba?: boolean };
 export const Ingredientes: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) => {
   const v = useVida(capa);
   const { width: W, height: H } = useVideoConfig();
@@ -146,10 +147,15 @@ export const Ingredientes: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) 
   const E = estiloFinal(ctx.estilo);
   const pts = (Array.isArray(capa.puntos) ? capa.puntos : []) as Punto[];
   const titulo = txt(capa.titulo);
+  // cada etiqueta sale hacia su propia esquina (según dónde está el punto respecto al centro de todos), y no cambia de lado
+  const cx = pts.reduce((a, p) => a + num(p.x, 0.5), 0) / Math.max(1, pts.length);
+  const cy = pts.reduce((a, p) => a + num(p.y, 0.5), 0) / Math.max(1, pts.length);
   return (
     <AbsoluteFill style={{ opacity: 1 - v.sale, pointerEvents: "none" }}>
       {titulo ? (
-        <div style={{ position: "absolute", left: 0, right: 0, top: H * 0.09, display: "flex", justifyContent: "center" }}>
+        <div style={{ position: "absolute", left: 60, right: 60, top: H * 0.07, display: "flex",
+          // si la cara está arriba al centro, el título se corre a la esquina libre
+          justifyContent: (() => { const c = caraEntre(ctx.caras, capa.desde, capa.hasta); if (c.y > 0.25) return "center"; return c.x + c.w / 2 > 0.5 ? "flex-start" : "flex-end"; })() }}>
           <div style={{ background: E.texto, color: E.fondo, fontFamily: familia(E.fuenteTitulo), fontSize: 50, padding: "14px 32px", borderRadius: 18, boxShadow: sombra,
             transform: `scale(${Math.max(0, v.entra)})` }}>{titulo}</div>
         </div>
@@ -158,9 +164,13 @@ export const Ingredientes: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) 
         const en = typeof p.en === "number" ? p.en : capa.desde + 0.3 + i * Math.min(0.7, (capa.hasta - capa.desde - 1) / Math.max(1, pts.length));
         const s = v.t - en;
         if (s < 0) return null;
-        const px = clamp(num(p.x, 0.5)) * W, py = clamp(num(p.y, 0.5)) * H;
-        const derecha = px < W / 2;                               // la etiqueta va hacia el lado con más espacio
-        const lx = derecha ? Math.min(W - 60, px + 170) : Math.max(60, px - 170), ly = py - 90;
+        // con tracking, el punto sigue al objeto cuadro a cuadro
+        const k = Math.max(0, Math.min((p.pista?.length ?? 1) - 1, v.f - Math.round(capa.desde * v.fps)));
+        const [qx, qy] = p.pista?.length ? p.pista[k] : [num(p.x, 0.5), num(p.y, 0.5)];
+        const px = clamp(qx) * W, py = clamp(qy) * H;
+        const derecha = p.lado ? p.lado === "derecha" : pts.length > 1 ? num(p.x, 0.5) >= cx : px < W / 2;
+        const arriba = typeof p.arriba === "boolean" ? p.arriba : pts.length > 1 ? num(p.y, 0.5) <= cy : true;
+        const lx = derecha ? Math.min(W - 60, px + 190) : Math.max(60, px - 190), ly = Math.max(70, Math.min(H - 70, arriba ? py - 110 : py + 110));
         const linea = eOut(clamp(s / 0.3)), et = eBack(clamp((s - 0.2) / 0.35), 1.8);
         return (
           <React.Fragment key={i}>
@@ -206,12 +216,12 @@ export const TallasColores: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx })
     const o = x as { nombre?: string; hex?: string };
     return { nombre: txt(o.nombre), hex: txt(o.hex, COLORES[txt(o.nombre).toLowerCase()] ?? "#CCCCCC") };
   });
-  const CW = W - 160, CH = 90 + (titulo ? 64 : 0) + (tallas.length ? 130 : 0) + (colores.length ? 150 : 0);
-  const c = caraEntre(ctx.caras, capa.desde, capa.hasta);
-  const top = typeof capa.y === "number" ? capa.y * H : (c.y + c.h) * H + 60 + CH < H * 0.86 ? Math.max(H * 0.47, (c.y + c.h) * H + 60) : H * 0.08;
+  const CH = 90 + (titulo ? 64 : 0) + (tallas.length ? 130 : 0) + (colores.length ? 150 : 0);
+  const z = colocar(capa, ctx, CH, W, H, { ancho: Math.min(W - 160, 860) });
+  const CW = z.width, top = z.top;
   const chip = 92;
   return (
-    <div style={{ position: "absolute", left: 80, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px) scale(${lerp(0.92, 1, v.entra)})` }}>
+    <div style={{ position: "absolute", left: z.left, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transformOrigin: "0 0", transform: `scale(${z.escala}) translateY(${(1 - v.entra) * 60}px) scale(${lerp(0.92, 1, v.entra)})` }}>
       <div style={{ background: E.fondo, borderRadius: 30, padding: "28px 32px", boxShadow: sombra }}>
         {titulo ? <div style={{ fontFamily: familia(E.fuenteTitulo), fontSize: 44, color: E.texto, letterSpacing: "-0.02em", marginBottom: 18 }}>{titulo}</div> : null}
         {tallas.length ? (

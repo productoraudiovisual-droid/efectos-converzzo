@@ -24,6 +24,6 @@ Parte del pack gratuito de efectos de Converzzo (@converzzo).
 ```json
 {"efecto": "cambiar-fondo", "desde": 10.4, "hasta": 14.2, "fondo_archivo": "fondo.jpg"}
 ```
-Opciones: `fondo_archivo` (foto o video; ruta relativa al plan o absoluta) o `color` (hex), `desenfoque` (px para desenfocar el fondo nuevo), `transicion` (0.35 s).
+Opciones: `fondo_archivo` (foto o video; ruta relativa al plan o absoluta) o `color` (hex), `desenfoque` (px para desenfocar el fondo nuevo), `transicion` (0.35 s). `sujeto`: `"objeto"` para recortar un objeto (un plato, un producto, una bebida) en vez de la persona: las manos y el resto quedan fuera. Marca el objeto con `"punto": [x, y]` o `"caja": [x0, y0, x1, y1]` (0 a 1) en el segundo `referencia` y el motor lo sigue con SAM 2.1 (ver "Objetos" en GUIA.md). Tarda más.
 
 Se puede combinar con cualquier otro efecto del pack en el mismo plan (ver GUIA.md).

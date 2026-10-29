@@ -2,6 +2,7 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Capa, Ctx, SfxPlan, caraEntre, clamp, eBack, eIn, eInOut, eOut, estiloFinal, familia, lerp, num } from "../lib/base";
+import { colocar } from "../lib/zona";
 
 const txt = (v: unknown, d = "") => (typeof v === "string" ? v : typeof v === "number" ? String(v) : d);
 const useVida = (capa: Capa) => {
@@ -11,21 +12,10 @@ const useVida = (capa: Capa) => {
   return { f, t, s, L, dentro: s >= -0.02 && s <= L + 0.02, entra: eBack(clamp(s / 0.42), 1.5), sale: eIn(clamp((s - (L - 0.3)) / 0.3)) };
 };
 const sombra = "0 24px 56px rgba(0,0,0,.33), 0 4px 12px rgba(0,0,0,.15)";
-// Altura libre para una tarjeta de alto CH (debajo de la cara; si no cabe, arriba).
-const ubicarY = (capa: Capa, ctx: Ctx, CH: number, H: number) => {
-  if (typeof capa.y === "number") return capa.y * H;
-  const c = caraEntre(ctx.caras, capa.desde, capa.hasta);
-  const bajo = (c.y + c.h) * H, limite = H * 0.86 - CH;
-  return bajo + 60 <= limite ? clamp(bajo + 60, H * 0.45, limite) : H * 0.08;
-};
-// Dónde va una tarjeta: en vertical, a lo ancho y debajo de la cara; en horizontal, al lado libre de la cara.
+// Dónde va una tarjeta en cualquier formato sin tapar la cara (ver lib/zona.ts).
 const zona = (capa: Capa, ctx: Ctx, CH: number, W: number, H: number) => {
-  if (W <= H) return { left: 60, width: W - 120, top: ubicarY(capa, ctx, CH, H) };
-  const c = caraEntre(ctx.caras, capa.desde, capa.hasta);
-  const width = Math.min(860, W * 0.44);
-  const left = c.x + c.w / 2 < 0.5 ? W - width - 70 : 70;
-  const top = typeof capa.y === "number" ? capa.y * H : clamp((H - CH) / 2, 40, H - CH - 40);
-  return { left, width, top };
+  const z = colocar(capa, ctx, CH, W, H, { ancho: W <= H ? W - 120 : 860 });
+  return { left: z.left, width: z.width, top: z.top, escala: z.escala };
 };
 const fmt = (n: number, dec: number) => {
   const [e, f] = n.toFixed(dec).split(".");
@@ -48,7 +38,7 @@ export const GraficaDatos: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) 
   const dec = Math.round(num(capa.decimales, 0));
   const dest = typeof capa.destacar === "number" ? capa.destacar : datos.reduce((bi, d, i, a) => (d.valor > a[bi].valor ? i : bi), 0);
   const AH = tipo === "dona" ? 380 : 420, CH = AH + (titulo ? 90 : 0) + 110;
-  const { left: LX, width: CW, top } = zona(capa, ctx, CH, W, H);
+  const { left: LX, width: CW, top, escala: ESC } = zona(capa, ctx, CH, W, H);
   const max = Math.max(...datos.map((d) => d.valor), 1);
   const inicio = 0.35, dur = Math.min(1.6, v.L * 0.45);
   const crece = (i: number) => eOut(clamp((v.s - inicio - i * 0.12) / dur));
@@ -121,7 +111,7 @@ export const GraficaDatos: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) 
     );
   }
   return (
-    <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.94, 1, v.entra)})` }}>
+    <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transformOrigin: "0 0", transform: `scale(${ESC}) translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.94, 1, v.entra)})` }}>
       <div style={{ background: E.fondo, borderRadius: 34, padding: "30px 40px", boxShadow: sombra }}>
         {titulo ? <div style={{ fontFamily: familia(E.fuenteTitulo), fontSize: 46, color: E.texto, letterSpacing: "-0.02em", marginBottom: 14 }}>{titulo}</div> : null}
         {grafica}
@@ -276,8 +266,10 @@ export const MockupInterfaz: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }
   if (tipo === "notificacion") {
     const ns = (Array.isArray(capa.notificaciones) ? capa.notificaciones : []) as Notif[];
     const visibles = ns.map((n, i) => ({ ...n, en: tiempoDe(i, ns.length, n.en) })).filter((n) => v.t >= n.en - 0.05);
+    // en vertical caen arriba (como en el celular); en otros formatos van donde no tapan la cara
+    const zn = W <= H * 0.7 ? null : colocar(capa, ctx, Math.max(1, ns.length) * 150, W, H, { ancho: 820 });
     return (
-      <div style={{ position: "absolute", ...(W > H ? { width: Math.min(820, W * 0.42), right: 60 } : { left: 40, right: 40 }), top: W > H ? 60 : 120, opacity: 1 - v.sale }}>
+      <div style={{ position: "absolute", ...(zn ? { left: zn.left, top: zn.top, width: zn.width, transformOrigin: "0 0", transform: `scale(${zn.escala})` } : { left: 40, right: 40, top: 120 }), opacity: 1 - v.sale }}>
         {visibles.slice().reverse().map((n, k) => {
           const a = eBack(clamp((v.t - n.en) / 0.4), 1.4);
           return (
@@ -307,9 +299,9 @@ export const MockupInterfaz: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }
     const pensando = v.s > enviado && v.s < enviado + 0.9;
     const r = clamp((v.s - enviado - 0.9) / Math.max(0.8, Math.min(2.5, resp.length * 0.03)));
     const CH = resp ? 300 : 200;
-    const { left: LX, width: CW, top } = zona(capa, ctx, CH, W, H);
+    const { left: LX, width: CW, top, escala: ESC } = zona(capa, ctx, CH, W, H);
     return (
-      <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px)` }}>
+      <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transformOrigin: "0 0", transform: `scale(${ESC}) translateY(${(1 - v.entra) * 60}px)` }}>
         <div style={{ background: "#FAFAF7", borderRadius: 30, padding: 28, boxShadow: sombra, fontFamily: familia(E.fuente) }}>
           {v.s > enviado ? (
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
@@ -339,10 +331,10 @@ export const MockupInterfaz: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }
   const visibles = ms.filter((m) => v.t >= m.en);
   const sig = ms.find((m) => v.t < m.en && m.en - v.t < 0.8 && m.de !== "yo");
   const CH = 560;
-  const { left: LX, width: CW, top } = zona(capa, ctx, CH, W, H);
+  const { left: LX, width: CW, top, escala: ESC } = zona(capa, ctx, CH, W, H);
   const nombre = txt(capa.nombre, "Cliente");
   return (
-    <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 60}px)` }}>
+    <div style={{ position: "absolute", left: LX, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transformOrigin: "0 0", transform: `scale(${ESC}) translateY(${(1 - v.entra) * 60}px)` }}>
       <div style={{ background: "#F2EFEA", borderRadius: 30, overflow: "hidden", boxShadow: sombra, fontFamily: familia(E.fuente) }}>
         <div style={{ background: "#fff", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16, borderBottom: "1px solid #E5E5E5" }}>
           <div style={{ width: 58, height: 58, borderRadius: 99, background: E.acento, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: familia(E.fuenteTitulo), fontSize: 28 }}>{nombre.slice(0, 1)}</div>
@@ -384,18 +376,29 @@ export const WidgetsVidrio: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx })
   const c = caraEntre(ctx.caras, capa.desde, capa.hasta);
   const cx = (c.x + c.w / 2) * W, top = c.y * H, bottom = (c.y + c.h) * H;
   const cw = 430, ch = 230;
-  // lugares libres: si hay espacio arriba de la cabeza, los dos primeros van ahí (izquierda y derecha);
-  // si no, a los lados de la cara. Los otros dos, a los lados del pecho.
-  const espacioLado = Math.min(cx - c.w * W * 0.5, W - (cx + c.w * W * 0.5)) - 50;
-  const arriba = top - ch - 40 >= 110;
-  const yArriba = arriba ? Math.max(110, top - ch - 40) : top;
-  const lugares = [
-    { x: arriba || espacioLado >= cw ? 40 : 30, y: arriba ? yArriba : Math.max(110, yArriba - 40) },
-    { x: W - cw - 40, y: arriba ? yArriba + 60 : Math.max(110, yArriba + 60) },
-    { x: 40, y: Math.min(H * 0.8 - ch, bottom + 130) },
-    { x: W - cw - 40, y: Math.min(H * 0.8 - ch, bottom + 210) },
-  ];
-  void cx;
+  // lugares libres alrededor de la persona: se prueban posiciones a los lados y arriba/abajo, se descartan las que tocan
+  // la cara (con margen para pelo y barbilla) y se eligen las más cercanas a ella, sin que se encimen entre sí.
+  // Si no caben todos, se prueban más pequeños.
+  const fx0 = c.x * W - 30, fx1 = (c.x + c.w) * W + 30, fy0 = top - c.h * H * 0.3 - 20, fy1 = bottom + c.h * H * 0.15 + 20;
+  const buscar = (e: number) => {
+    const w = cw * e, h = ch * e;
+    const choca = (x: number, y: number, x2: number, y2: number, w2: number, h2: number) => x < x2 + w2 && x + w > x2 && y < y2 + h2 && y + h > y2;
+    const xs = [40, W - w - 40, W * 0.25 - w / 2, W * 0.75 - w / 2].map((x) => clamp(x, 30, W - w - 30));
+    const ys = [110, H * 0.25, H * 0.42, H * 0.6, H * 0.8 - h].map((y) => clamp(y, 60, H - h - 60));
+    const candidatos = xs.flatMap((x) => ys.map((y) => ({ x, y }))).filter((p) => !choca(p.x, p.y, fx0, fy0, fx1 - fx0, fy1 - fy0))
+      .sort((p, q) => Math.hypot(p.x + w / 2 - cx, p.y + h / 2 - (top + bottom) / 2) - Math.hypot(q.x + w / 2 - cx, q.y + h / 2 - (top + bottom) / 2));
+    const lugares: { x: number; y: number }[] = [];
+    for (const p of candidatos) {
+      if (lugares.length >= ws.length) break;
+      if (lugares.some((q) => choca(p.x, p.y, q.x - 20, q.y - 20, w + 40, h + 40))) continue;
+      lugares.push(p);
+    }
+    return lugares;
+  };
+  let esc = 1, lugares = buscar(1);
+  for (const e of [0.82, 0.68]) { if (lugares.length >= ws.length) break; esc = e; lugares = buscar(e); }
+  lugares.sort((p, q) => p.y - q.y || p.x - q.x);       // orden de lectura: de arriba a abajo
+  while (lugares.length < ws.length) lugares.push({ x: 40, y: H * 0.8 - ch * esc - lugares.length * 20 });
   const vidrio: React.CSSProperties = { background: "rgba(255,255,255,.18)", backdropFilter: "blur(22px) saturate(1.4)", WebkitBackdropFilter: "blur(22px) saturate(1.4)",
     border: "1.5px solid rgba(255,255,255,.45)", borderRadius: 34, boxShadow: "0 20px 50px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.6)", padding: "24px 28px", color: "#fff" };
   return (
@@ -407,7 +410,7 @@ export const WidgetsVidrio: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx })
         const tipo = w.tipo ?? (Array.isArray(w.datos) ? "grafica" : typeof w.progreso === "number" ? "progreso" : "numero");
         const k = eOut(clamp((v.s - 0.4 - i * 0.18) / 1.0));
         return (
-          <div key={i} style={{ position: "absolute", left: L.x, top: L.y, width: cw, ...vidrio, opacity: clamp(a * 2), transform: `translateY(${flota + (1 - clamp(a)) * 40}px) scale(${lerp(0.8, 1, Math.max(0, a))})` }}>
+          <div key={i} style={{ position: "absolute", left: L.x, top: L.y, width: cw, ...vidrio, opacity: clamp(a * 2), transformOrigin: "0 0", transform: `scale(${esc}) translateY(${flota + (1 - clamp(a)) * 40}px) scale(${lerp(0.8, 1, Math.max(0, a))})` }}>
             <div style={{ fontFamily: familia(E.fuente), fontSize: 26, opacity: 0.9, textShadow: "0 1px 3px rgba(0,0,0,.25)" }}>{txt(w.titulo)}</div>
             {tipo === "grafica" ? (
               <svg width={cw - 56} height={110} style={{ marginTop: 10 }}>

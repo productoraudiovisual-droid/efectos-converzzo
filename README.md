@@ -21,7 +21,7 @@ Adjunta tu video y escribe el comando, por ejemplo:
 
 > /zoom-in en la palabra "gratis"
 
-Claude escucha el video, te muestra el plan para que lo apruebes y te entrega el video listo, en el mismo formato de tu video (vertical 1080×1920 u horizontal 1920×1080).
+Claude escucha el video, te muestra el plan para que lo apruebes y te entrega el video listo, en el mismo formato de tu video (vertical 1080×1920 u horizontal 1920×1080), o en cuadrado o 4:5 si lo pides.
 
 ## Efectos
 **Edición base**
@@ -71,6 +71,22 @@ Claude escucha el video, te muestra el plan para que lo apruebes y te entrega el
 | `/widgets-vidrio` | Tarjetas de vidrio con tus métricas alrededor tuyo |
 | `/collage-halftone` | Tú como recorte de papel impreso sobre kraft, estilo stop motion |
 | `/carrusel-video` | Tu carrusel de Instagram convertido en video |
+| `/zoom-al-ritmo` | Pulsos de zoom al ritmo de la música |
+| `/parallax-3d` | Un momento del video (o una foto) en 3D con movimiento de cámara |
+
+**Recorte y seguimiento (tracking)**
+| Comando | Qué hace |
+|---|---|
+| `/pixelar` | Pixela o desenfoca algo (un documento, una placa, una cara) y lo sigue aunque se mueva |
+| `/lupa` | Una lupa que amplía un detalle y lo sigue |
+| `/foco` | Oscurece todo menos el objeto o la persona |
+| `/etiqueta-sigue` | Etiqueta con nombre pegada a un producto que se mueve |
+| `/reencuadre-objeto` | Pasa a vertical siguiendo un producto u objeto |
+| `/contorno-neon` | Línea de luz neón alrededor de tu silueta |
+| `/sticker` | Tú o tu producto como sticker con borde blanco |
+| `/eco` | Estela de movimiento detrás de ti o de un objeto |
+| `/quitar-fondo` | Te entrega el video sin fondo (transparente) para usar en cualquier editor |
+| `/pantalla-verde` | Quita la tela verde y pone el fondo que quieras |
 
 **Sonido**
 | Comando | Qué hace |
@@ -84,6 +100,8 @@ Claude escucha el video, te muestra el plan para que lo apruebes y te entrega el
 | `/acelerar` | Acelera un tramo (x2, x4…) |
 | `/congelar` | Congela la imagen con un texto y una flecha dibujada |
 | `/rebobinar` | Rebobina con look VHS y repite el momento |
+| `/rampa-velocidad` | Frena suave a cámara lenta (o acelera) y vuelve, como en los edits de acción |
+| `/estabilizar` | Quita el temblor de un video grabado a mano |
 
 **Para negocios**
 | Comando | Qué hace |
@@ -106,6 +124,7 @@ Se actualiza desde la sección Plugins.
 - Un plan de pago de Claude (Pro, Max, Team o Enterprise).
 - Recomendado: Cowork o Claude Code, porque el video se procesa en tu computador.
 - Claude instala solo lo que haga falta (ffmpeg, Node.js, Python). No hay costos extra ni cuentas nuevas.
+- Funciona en Mac y Windows. Si tu computador tiene tarjeta gráfica, la usa sola para ir más rápido (Mac: CoreML · Windows: DirectML · NVIDIA: CUDA); si no, usa el procesador.
 
 ## Para desarrolladores
 - `.claude-plugin/marketplace.json`: el marketplace (este repo).
@@ -113,8 +132,10 @@ Se actualiza desde la sección Plugins.
   - `skills/<efecto>/SKILL.md`: los comandos.
   - `preparar.sh`: copia el motor a `~/.claude/efectos-converzzo` e instala dependencias la primera vez o cuando cambia `VERSION`.
   - `motor/`: proyecto Remotion con una sola composición (`Editar`) que aplica capas. Cámara en `motor/src/efectos/camara.tsx`; gráficos en `motor/src/efectos/`, registrados en `motor/src/Editar.tsx`.
-  - `motor/render.mjs <video> <plan.json> <salida.mp4> [--still 1.5,3]`: render en un paso (cara, recorte, -14 LUFS).
+  - `motor/render.mjs <video> <plan.json> <salida.mp4> [--still 1.5,3] [--borrador]`: render en un paso (cara, recorte, tracking, -14 LUFS). Guarda transcripción, caras y recortes en `motor/.cache`.
+  - Variables: `EFECTOS_CPU=1` (sin GPU), `EFECTOS_HILOS=n` (hilos del render), `EFECTOS_GL` (motor gráfico de Chrome), `EFECTOS_WHISPER` (modelo de transcripción).
   - `GUIA.md`: el flujo que siguen todos los comandos.
+  - `motor/probar.mjs <video_persona> <carpeta>`: prueba todos los efectos gráficos en vertical, horizontal, cuadrado y 4:5 y avisa si alguno tapa la cara, toca el borde o no se ve (deja hojas de contacto).
 - Para publicar una versión nueva: sube `VERSION` y `version` en `plugin.json` y `marketplace.json`.
 
 Licencia MIT. Ver `plugins/efectos-converzzo/NOTICE.md` para fuentes y modelos de terceros.

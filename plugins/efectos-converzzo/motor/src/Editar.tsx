@@ -11,6 +11,7 @@ import { Congelar, Etiqueta, Vhs, sonidosTiempo } from "./efectos/tiempo";
 import { CartelNombre, Dato, Gancho, Ingredientes, TallasColores, sonidosCartel, sonidosDato, sonidosGancho, sonidosIngredientes, sonidosTallas } from "./efectos/universales";
 import { Subtitulos } from "./efectos/subtitulos";
 import { GraficaDatos, LogoSting, MockupInterfaz, TierList, WidgetsVidrio, sonidosGrafica, sonidosLogo, sonidosMockup, sonidosTier, sonidosWidgets } from "./efectos/motion";
+import { EFECTOS_OBJETO, EtiquetaSigue, Lupa, Parallax3D, sonidosObjeto } from "./efectos/objetos";
 import { AntesDespues, Comparativo, CtaWhatsapp, Ficha, PasoAPaso, Ubicacion, sonidosAntesDespues, sonidosComparativo, sonidosCta, sonidosFicha, sonidosPasos, sonidosUbicacion } from "./efectos/negocios";
 
 // Efectos gráficos (van encima del video y no se mueven con la cámara).
@@ -37,16 +38,20 @@ const GRAFICOS: Record<string, Grafico> = {
   "widgets-vidrio": { C: WidgetsVidrio as Grafico["C"], sonidos: sonidosWidgets as Grafico["sonidos"] },
   "collage-halftone": { C: CollageHalftone as Grafico["C"], sonidos: sonidosCollage as Grafico["sonidos"] },
   "carrusel-video": { C: CarruselVideo as Grafico["C"], sonidos: sonidosCarrusel as Grafico["sonidos"] },
+  lupa: { C: Lupa as Grafico["C"], sonidos: sonidosObjeto as Grafico["sonidos"] },
+  "etiqueta-sigue": { C: EtiquetaSigue as Grafico["C"], sonidos: sonidosObjeto as Grafico["sonidos"] },
+  "parallax-3d": { C: Parallax3D as Grafico["C"], sonidos: sonidosObjeto as Grafico["sonidos"] },
   // capas internas que crea tiempo.mjs (congelar, rebobinar, etiquetas de velocidad)
   _congelar: { C: Congelar as Grafico["C"], sonidos: sonidosTiempo as Grafico["sonidos"] },
   _vhs: { C: Vhs as Grafico["C"], sonidos: sonidosTiempo as Grafico["sonidos"] },
   _etiqueta: { C: Etiqueta as Grafico["C"] },
 };
-export const EFECTOS = [...EFECTOS_CAMARA, ...EFECTOS_IMAGEN, ...EFECTOS_SUPERFICIE, ...Object.keys(GRAFICOS)];
+export const EFECTOS = [...EFECTOS_CAMARA, ...EFECTOS_IMAGEN, ...EFECTOS_SUPERFICIE, ...EFECTOS_OBJETO, ...Object.keys(GRAFICOS)];
 
 const sonidosDe = (c: Capa): SfxPlan[] => {
   if (EFECTOS_CAMARA.includes(c.efecto) || EFECTOS_IMAGEN.includes(c.efecto)) return sonidosEscena(c);
   if (EFECTOS_SUPERFICIE.includes(c.efecto)) return sonidosSuperficie(c);
+  if (EFECTOS_OBJETO.includes(c.efecto)) return sonidosObjeto(c);
   return GRAFICOS[c.efecto]?.sonidos?.(c as never) ?? [];
 };
 
@@ -54,7 +59,7 @@ export const Editar: React.FC<Plan> = (plan) => {
   const { width: W, height: H } = useVideoConfig();
   const E = estiloFinal(plan.estilo);
   useFuentes([E.fuente, E.fuenteTitulo]);
-  const ctx: Ctx = { estilo: plan.estilo, caras: carasEnPantalla(plan, W, H), video: plan.video };
+  const ctx: Ctx = { estilo: plan.estilo, caras: carasEnPantalla(plan, W, H), video: plan.video, ancho: plan.ancho, alto: plan.alto };
   const es = plan.capas.find((c) => c.efecto === "efectos-sonido");
   const nivel = es ? ({ sutil: 0.6, medio: 1, fuerte: 1.4 } as Record<string, number>)[String(es.nivel ?? "medio")] ?? 1 : 1;
   const extra: SfxPlan[] = es ? [
@@ -64,7 +69,7 @@ export const Editar: React.FC<Plan> = (plan) => {
   ] : [];
   const sonidos = plan.sonido === false ? [] : [...plan.capas.flatMap(sonidosDe), ...extra].map((x) => ({ ...x, vol: Math.min(1, (x.vol ?? 0.5) * nivel) }));
   return (
-    <AbsoluteFill style={{ background: "#000" }}>
+    <AbsoluteFill style={{ background: plan._alfa ? "transparent" : "#000" }}>
       <ConGlitch plan={plan}>
         <Escena plan={plan} />
         <Grano plan={plan} />

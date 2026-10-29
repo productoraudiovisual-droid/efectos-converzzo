@@ -2,3 +2,8 @@ node_modules/
 .venv/
 motor/public/_in_*/
 __pycache__/
+motor/models/rvm_*.onnx
+motor/models/u2net.onnx
+motor/models/isnet-general-use.onnx
+motor/.cache/
+motor/models/hf/

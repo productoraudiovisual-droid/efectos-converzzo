@@ -3,6 +3,7 @@
 import React from "react";
 import { AbsoluteFill, Freeze, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Capa, Ctx, SfxPlan, caraEntre, clamp, eBack, eIn, eInOut, eOut, estiloFinal, familia, lerp, num } from "../lib/base";
+import { colocar } from "../lib/zona";
 
 // ---------- utilidades compartidas ----------
 const txt = (v: unknown, d = "") => (typeof v === "string" ? v : typeof v === "number" ? String(v) : d);
@@ -49,11 +50,11 @@ export const PasoAPaso: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) => 
   const titulo = txt(capa.titulo);
   const fs = pasos.length > 4 ? 34 : 40, fila = fs * 1.9;
   const CH = 60 + (titulo ? 70 : 0) + pasos.length * fila;
-  const CW = W - 140;
-  const top = ubicarY(capa, ctx, CH, H);
+  const z = colocar(capa, ctx, CH, W, H, { ancho: W - 140 });
+  const CW = z.width, top = z.top;
   return (
-    <div style={{ position: "absolute", left: 70, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale),
-      transform: `translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.92, 1, v.entra)})` }}>
+    <div style={{ position: "absolute", left: z.left, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale),
+      transformOrigin: "0 0", transform: `scale(${z.escala}) translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.92, 1, v.entra)})` }}>
       <div style={{ ...tarjeta(E.fondo), padding: "28px 34px" }}>
         {titulo ? <div style={{ fontFamily: familia(E.fuenteTitulo), fontSize: 44, color: E.texto, letterSpacing: "-0.02em", marginBottom: 16 }}>{titulo}</div> : null}
         {pasos.map((p, i) => {
@@ -97,8 +98,9 @@ export const Comparativo: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) =
   const filas = Math.max(pi.length, pd.length);
   const ganador = capa.ganador === "izquierda" || capa.ganador === "izq" ? "izq" : capa.ganador === "ninguno" ? "" : "der";
   const paso = Math.min(0.6, Math.max(0.25, (v.L - 1.4) / Math.max(1, filas)));
-  const fs = 32, fila = 74, CW = W - 100, CH = 120 + filas * fila + 40;
-  const top = ubicarY(capa, ctx, CH, H);
+  const fs = 32, fila = 74, CH = 120 + filas * fila + 40;
+  const z = colocar(capa, ctx, CH, W, H, { ancho: Math.min(W - 100, 980) });
+  const CW = z.width, top = z.top;
   const col = (titulo: string, puntos: string[], lado: "izq" | "der") => {
     const gana = ganador === lado, otro = ganador && !gana;
     return (
@@ -118,7 +120,7 @@ export const Comparativo: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) =
     );
   };
   return (
-    <div style={{ position: "absolute", left: 50, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 70}px)` }}>
+    <div style={{ position: "absolute", left: z.left, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transformOrigin: "0 0", transform: `scale(${z.escala}) translateY(${(1 - v.entra) * 70}px)` }}>
       <div style={{ ...tarjeta(E.fondo), padding: "26px 18px", display: "flex", position: "relative" }}>
         {col(txt(izq.titulo, "Ellos"), pi, "izq")}
         <div style={{ width: 3, background: "#EEE", margin: "70px 4px 10px" }} />
@@ -195,15 +197,16 @@ export const CtaWhatsapp: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) =
   const E = estiloFinal(ctx.estilo);
   const verde = txt(capa.color, "#25D366");
   const texto = txt(capa.texto, "Escríbenos por WhatsApp"), numero = txt(capa.numero), sub = txt(capa.subtexto);
-  const CW = W - 160, CH = 150 + (numero ? 60 : 0) + (sub ? 50 : 0);
-  const top = typeof capa.y === "number" ? capa.y * H : Math.min(H * 0.86 - CH, Math.max(ubicarY(capa, ctx, CH, H), H * 0.62));
+  const CH = 150 + (numero ? 60 : 0) + (sub ? 50 : 0);
+  const z = colocar(capa, ctx, CH, W, H, { ancho: Math.min(W - 160, 900), arribaMin: H >= W * 1.3 ? H * 0.62 : undefined, preferir: "abajo" });
+  const CW = z.width, top = z.top;
   const toque = Math.min(v.L - 0.6, 1.2);
   const tq = clamp((v.s - toque) / 0.45);
   const presion = v.s > toque && v.s < toque + 0.18 ? 0.95 : 1;
   const pulso = (v.s * 1.1) % 1;
   return (
-    <div style={{ position: "absolute", left: 80, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale),
-      transform: `translateY(${(1 - v.entra) * 80}px) scale(${lerp(0.85, 1, v.entra) * presion})` }}>
+    <div style={{ position: "absolute", left: z.left, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale),
+      transformOrigin: "0 0", transform: `scale(${z.escala}) translateY(${(1 - v.entra) * 80}px) scale(${lerp(0.85, 1, v.entra) * presion})` }}>
       <div style={{ position: "absolute", inset: -10 - pulso * 26, borderRadius: 60, border: `4px solid ${verde}`, opacity: 0.6 * (1 - pulso) }} />
       <div style={{ ...tarjeta(verde), borderRadius: 48, padding: "28px 36px", display: "flex", alignItems: "center", gap: 26 }}>
         {/* ícono de chat genérico */}
@@ -237,13 +240,14 @@ export const Ubicacion: React.FC<{ capa: Capa; ctx: Ctx }> = ({ capa, ctx }) => 
   if (!v.dentro) return null;
   const E = estiloFinal(ctx.estilo);
   const nombre = txt(capa.nombre), direccion = txt(capa.direccion), horario = txt(capa.horario);
-  const CW = W - 160, MAPA = 230, CH = MAPA + 60 + (nombre ? 56 : 0) + (direccion ? 46 : 0) + (horario ? 64 : 0);
-  const top = ubicarY(capa, ctx, CH, H);
+  const MAPA = 230, CH = MAPA + 60 + (nombre ? 56 : 0) + (direccion ? 46 : 0) + (horario ? 64 : 0);
+  const z = colocar(capa, ctx, CH, W, H, { ancho: Math.min(W - 160, 900) });
+  const CW = z.width, top = z.top;
   const ruta = eInOut(clamp((v.s - 0.3) / 0.8));
   const pin = eBack(clamp((v.s - 0.9) / 0.4), 2);
   const mw = CW - 40;
   return (
-    <div style={{ position: "absolute", left: 80, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transform: `translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.92, 1, v.entra)})` }}>
+    <div style={{ position: "absolute", left: z.left, top, width: CW, opacity: clamp(v.entra * 3) * (1 - v.sale), transformOrigin: "0 0", transform: `scale(${z.escala}) translateY(${(1 - v.entra) * 70}px) scale(${lerp(0.92, 1, v.entra)})` }}>
       <div style={{ ...tarjeta(E.fondo), padding: 20 }}>
         <svg width={mw} height={MAPA} style={{ display: "block", borderRadius: 20, background: "#EEF1EC" }}>
           {/* manzanas y calles ilustradas */}

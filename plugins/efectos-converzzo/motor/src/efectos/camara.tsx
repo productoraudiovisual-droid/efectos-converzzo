@@ -6,10 +6,11 @@
 import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, random, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Capa, Cara, Plan, SfxPlan, caraEn, caraEntre, clamp, eInOut, eOut, lerp, num } from "../lib/base";
+import { CapasObjeto, posObjeto } from "./objetos";
 
-export const EFECTOS_CAMARA = ["zoom-in", "zoom-suave", "zoom-out", "sacudida", "dolly-zoom", "reencuadre", "barrido", "zoom-transicion"];
-export const EFECTOS_IMAGEN = ["look", "color-auto", "color-pop", "fondo-borroso", "cambiar-fondo"];
-export const NECESITAN_RECORTE = ["dolly-zoom", "color-pop", "fondo-borroso", "cambiar-fondo"];
+export const EFECTOS_CAMARA = ["zoom-in", "zoom-suave", "zoom-out", "sacudida", "dolly-zoom", "reencuadre", "barrido", "zoom-transicion", "zoom-al-ritmo"];
+export const EFECTOS_IMAGEN = ["look", "color-auto", "color-pop", "fondo-borroso", "cambiar-fondo", "quitar-fondo"];
+export const NECESITAN_RECORTE = ["dolly-zoom", "color-pop", "fondo-borroso", "cambiar-fondo", "quitar-fondo"];
 
 // Entrada y salida suave de un efecto que dura todo un tramo (0 → 1 → 0).
 const presencia = (c: Capa, t: number, fade = 0.3) => {
@@ -30,6 +31,13 @@ export const desplazamiento = (plan: Plan, t: number, W: number, H: number) => {
   const { vw } = tamVideo(plan, W, H);
   const margen = (vw - W) / 2;
   if (margen <= 0) return 0;
+  // reencuadre-objeto: sigue al objeto (promedio de ±suavidad para que la cámara no tiemble)
+  if (r._pista) {
+    const fps = plan.fps || 30, n = Math.max(1, Math.round(num(r.suavidad, 0.6) * fps / 2));
+    let sx = 0, k = 0;
+    for (let d = -n; d <= n; d += Math.max(1, Math.round(n / 6))) { const p = posObjeto(r, Math.round(t * fps) + d); if (p) { sx += p.x; k++; } }
+    if (k) return clamp(W * num(r.posicion, 0.5) - (sx / k) * W, -margen, margen);
+  }
   const c = caraEn(plan.caras, t, num(r.suavidad, 0.6));
   return clamp(W * num(r.posicion, 0.5) - (c.x + c.w / 2) * W, -margen, margen);
 };
@@ -69,6 +77,19 @@ const movimiento = (c: Capa, t: number, fps: number): Mov | null => {
       const r = (k: string) => random(`${k}-${f}-${c.desde}`) * 2 - 1;
       m.tx = r("x") * 30 * i * caida; m.ty = r("y") * 22 * i * caida; m.rot = r("r") * 1.6 * i * caida;
       m.s = 1 + 0.07 * i * caida;
+      break;
+    }
+    case "zoom-al-ritmo": {      // un golpe de zoom en cada beat (o cada 2, 4…), que cae rápido
+      const golpes = ((Array.isArray(c._golpes) ? c._golpes : []) as number[][]).filter((_, i) => i % Math.max(1, Math.round(num(c.cada, 1))) === 0);
+      const z = num(c.zoom, 0.07), caida = num(c.caida, 0.2);
+      let k = 0;
+      for (const [tb, fz] of golpes) {
+        const dt = t - tb;
+        if (dt < -0.04 || dt > caida * 4) continue;
+        const forma = dt < 0 ? 1 + dt / 0.04 : Math.exp(-dt / caida);          // sube en 40 ms y cae
+        k = Math.max(k, forma * (c.fuerza_variable === false ? 1 : 0.55 + 0.45 * num(fz, 1)));
+      }
+      m.s = 1 + z * k;
       break;
     }
     case "_alterno": {             // cortes de silencio: un tramo normal, el siguiente un poco más cerca (oculta el salto)
@@ -235,15 +256,19 @@ export const Escena: React.FC<{ plan: Plan }> = ({ plan }) => {
     </AbsoluteFill>
   );
   const conBlur = (nodo: React.ReactNode) => (BLUR > 0.3 ? <AbsoluteFill style={{ filter: `blur(${BLUR.toFixed(2)}px)` }}>{nodo}</AbsoluteFill> : nodo);
-  const capaBase = conBlur(conBarrido(camara(<>{video}{persona}</>)));
+  // quitar-fondo: solo la persona (u objeto) sobre transparente o sobre un color plano
+  const qf = plan.capas.find((c) => c.efecto === "quitar-fondo" && t >= c.desde && t <= c.hasta);
+  const capaBase = qf && persona
+    ? <AbsoluteFill style={{ background: typeof qf.fondo === "string" ? qf.fondo : "transparent" }}>{camara(<>{persona}<CapasObjeto plan={plan} filtro={filtroAuto || undefined} /></>)}</AbsoluteFill>
+    : conBlur(conBarrido(camara(<>{video}{persona}<CapasObjeto plan={plan} filtro={filtroAuto || undefined} /></>)));
 
   return (
-    <AbsoluteFill style={{ background: "#000", overflow: "hidden" }}>
+    <AbsoluteFill style={{ background: plan._alfa ? "transparent" : "#000", overflow: "hidden" }}>
       {defsAuto}
       {capaBase}
-      {look && look.k > 0 ? (
+      {look && look.k > 0 && !qf ? (
         // la versión con look encima, con opacidad = intensidad (así entra y sale suave)
-        <AbsoluteFill style={{ opacity: look.k, filter: look.filtro }}>{conBlur(conBarrido(camara(<>{video}{persona}</>)))}</AbsoluteFill>
+        <AbsoluteFill style={{ opacity: look.k, filter: look.filtro }}>{conBlur(conBarrido(camara(<>{video}{persona}<CapasObjeto plan={plan} filtro={filtroAuto || undefined} /></>)))}</AbsoluteFill>
       ) : null}
       {look && look.k > 0 && (look.nombre === "cine" || look.nombre === "vintage") ? (
         <AbsoluteFill style={{ opacity: look.k * 0.55, background: "radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%)" }} />
